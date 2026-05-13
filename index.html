@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Schema Visual Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-hover: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #475569;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .logo svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        /* Main Layout */
+        .main {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+        }
+
+        .type-palette {
+            padding: 16px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .type-item {
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            cursor: grab;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .type-item:hover {
+            background: var(--border);
+            transform: translateY(-2px);
+        }
+
+        .type-item:active {
+            cursor: grabbing;
+        }
+
+        .type-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .type-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Canvas */
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-dark);
+        }
+
+        .toolbar {
+            padding: 12px 20px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .toolbar-separator {
+            width: 1px;
+            height: 24px;
+            background: var(--border);
+            margin: 0 5px;
+        }
+
+        .canvas {
+            flex: 1;
+            overflow: auto;
+            padding: 40px;
+            background-image:
+                radial-gradient(circle at 1px 1px, var(--border) 1px, transparent 0);
+            background-size: 20px 20px;
+        }
+
+        .schema-root {
+            background: var(--bg-card);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 20px;
+            min-width: 400px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .schema-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .schema-title {
+            flex: 1;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .schema-type-badge {
+            background: var(--primary);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .properties-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .property-item {
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s;
+        }
+
+        .property-item:hover {
+            border-color: var(--primary);
+        }
+
+        .property-drag-handle {
+            color: var(--text-secondary);
+            cursor: grab;
+        }
+
+        .property-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .property-icon.string { background: rgba(99, 102, 241, 0.2); color: #818cf8; }
+        .property-icon.number { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .property-icon.integer { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .property-icon.boolean { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        .property-icon.array { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+        .property-icon.object { background: rgba(14, 165, 233, 0.2); color: #38bdf8; }
+
+        .property-info {
+            flex: 1;
+        }
+
+        .property-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .property-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .property-actions {
+            display: flex;
+            gap: 6px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .property-item:hover .property-actions {
+            opacity: 1;
+        }
+
+        .property-actions button {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .property-actions button:hover {
+            background: var(--border);
+            color: var(--text-primary);
+        }
+
+        .add-property-btn {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .add-property-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* Preview Panel */
+        .preview-panel {
+            width: 400px;
+            background: var(--bg-card);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .preview-tab {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .preview-tab.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .preview-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .preview-content {
+            flex: 1;
+            overflow: auto;
+            padding: 16px;
+        }
+
+        .code-block {
+            background: var(--bg-dark);
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .code-block .key {
+            color: #7dd3fc;
+        }
+
+        .code-block .string {
+            color: #86efac;
+        }
+
+        .code-block .number {
+            color: #fca5a5;
+        }
+
+        .code-block .boolean {
+            color: #f0abfc;
+        }
+
+        .code-block .null {
+            color: #94a3b8;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow: hidden;
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+        }
+
+        .modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state-title {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        /* Validation Panel */
+        .validation-panel {
+            padding: 16px;
+        }
+
+        .validation-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .validation-item.success {
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .validation-item.error {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .validation-icon {
+            font-size: 18px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .preview-panel {
+                width: 350px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 240px;
+            }
+            .preview-panel {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7z"/>
+                    <path d="M9 12h6M12 9v6"/>
+                </svg>
+                JSON Schema Visual Editor
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="app.importSchema()">
+                    <span>📥</span> 导入
+                </button>
+                <button class="btn btn-secondary" onclick="app.exportSchema()">
+                    <span>📤</span> 导出
+                </button>
+                <button class="btn btn-primary" onclick="app.copySchema()">
+                    <span>📋</span> 复制 JSON
+                </button>
+            </div>
+        </header>
+
+        <!-- Main -->
+        <div class="main">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    🧩 组件面板
+                </div>
+                <div class="type-palette">
+                    <div class="type-item" draggable="true" data-type="string">
+                        <div class="type-icon">📝</div>
+                        <div class="type-label">String</div>
+                    </div>
+                    <div class="type-item" draggable="true" data-type="number">
+                        <div class="type-icon">🔢</div>
+                        <div class="type-label">Number</div>
+                    </div>
+                    <div class="type-item" draggable="true" data-type="integer">
+                        <div class="type-icon">#️⃣</div>
+                        <div class="type-label">Integer</div>
+                    </div>
+                    <div class="type-item" draggable="true" data-type="boolean">
+                        <div class="type-icon">☑️</div>
+                        <div class="type-label">Boolean</div>
+                    </div>
+                    <div class="type-item" draggable="true" data-type="array">
+                        <div class="type-icon">📚</div>
+                        <div class="type-label">Array</div>
+                    </div>
+                    <div class="type-item" draggable="true" data-type="object">
+                        <div class="type-icon">📦</div>
+                        <div class="type-label">Object</div>
+                    </div>
+                </div>
+                <div class="sidebar-header">
+                    📊 验证信息
+                </div>
+                <div class="validation-panel" id="validationPanel">
+                    <div class="validation-item success">
+                        <span class="validation-icon">✅</span>
+                        <span>Schema 格式有效</span>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Canvas -->
+            <div class="canvas-container">
+                <div class="toolbar">
+                    <button class="btn btn-secondary" onclick="app.undo()">
+                        <span>↩️</span> 撤销
+                    </button>
+                    <button class="btn btn-secondary" onclick="app.redo()">
+                        <span>↪️</span> 重做
+                    </button>
+                    <div class="toolbar-separator"></div>
+                    <button class="btn btn-secondary" onclick="app.clearSchema()">
+                        <span>🗑️</span> 清空
+                    </button>
+                    <button class="btn btn-secondary" onclick="app.loadExample()">
+                        <span>📄</span> 加载示例
+                    </button>
+                </div>
+                <div class="canvas" id="canvas">
+                    <div class="schema-root" id="schemaRoot">
+                        <div class="schema-header">
+                            <span class="schema-title" id="schemaTitle">Root Schema</span>
+                            <span class="schema-type-badge">object</span>
+                        </div>
+                        <div class="properties-list" id="propertiesList">
+                            <!-- Properties will be rendered here -->
+                        </div>
+                        <button class="add-property-btn" onclick="app.showAddModal()">
+                            <span>➕</span> 添加属性
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Panel -->
+            <aside class="preview-panel">
+                <div class="preview-tabs">
+                    <button class="preview-tab active" onclick="app.switchTab('json')">JSON Schema</button>
+                    <button class="preview-tab" onclick="app.switchTab('example')">示例数据</button>
+                </div>
+                <div class="preview-content" id="previewContent">
+                    <div class="code-block" id="jsonPreview"></div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Add/Edit Property Modal -->
+    <div class="modal-overlay" id="propertyModal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title" id="modalTitle">添加属性</span>
+                <button class="modal-close" onclick="app.closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">属性名称 *</label>
+                    <input type="text" class="form-input" id="propName" placeholder="例如: userName">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">数据类型 *</label>
+                        <select class="form-select" id="propType">
+                            <option value="string">String (字符串)</option>
+                            <option value="number">Number (数字)</option>
+                            <option value="integer">Integer (整数)</option>
+                            <option value="boolean">Boolean (布尔值)</option>
+                            <option value="array">Array (数组)</option>
+                            <option value="object">Object (对象)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">默认值</label>
+                        <input type="text" class="form-input" id="propDefault" placeholder="可选">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">描述</label>
+                    <textarea class="form-textarea" id="propDescription" placeholder="属性的描述信息..."></textarea>
+                </div>
+                <div class="form-row" id="stringOptions">
+                    <div class="form-group">
+                        <label class="form-label">最小长度</label>
+                        <input type="number" class="form-input" id="propMinLength" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">最大长度</label>
+                        <input type="number" class="form-input" id="propMaxLength" placeholder="∞">
+                    </div>
+                </div>
+                <div class="form-row" id="numberOptions" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">最小值</label>
+                        <input type="number" class="form-input" id="propMinimum" placeholder="-∞">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">最大值</label>
+                        <input type="number" class="form-input" id="propMaximum" placeholder="∞">
+                    </div>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="propRequired">
+                    <label for="propRequired">必填字段</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="app.saveProperty()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div class="modal-overlay" id="importModal">
+        <div class="modal" style="max-width: 600px;">
+            <div class="modal-header">
+                <span class="modal-title">导入 JSON Schema</span>
+                <button class="modal-close" onclick="app.closeImportModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">粘贴 JSON Schema</label>
+                    <textarea class="form-textarea" id="importSchemaText" style="min-height: 300px; font-family: monospace;" placeholder='{
+  "type": "object",
+  "properties": {
+    "name": { "type": "string" }
+  }
+}'></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeImportModal()">取消</button>
+                <button class="btn btn-primary" onclick="app.parseImport()">导入</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class JSONSchemaEditor {
+            constructor() {
+                this.schema = {
+                    type: 'object',
+                    properties: {},
+                    required: []
+                };
+                this.history = [];
+                this.historyIndex = -1;
+                this.editingProperty = null;
+                this.currentTab = 'json';
+                this.init();
+            }
+
+            init() {
+                this.saveState();
+                this.render();
+                this.setupDragAndDrop();
+                this.setupTypeChange();
+            }
+
+            setupDragAndDrop() {
+                const typeItems = document.querySelectorAll('.type-item');
+                typeItems.forEach(item => {
+                    item.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('type', item.dataset.type);
+                    });
+                });
+
+                const canvas = document.getElementById('canvas');
+                canvas.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                });
+
+                canvas.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const type = e.dataTransfer.getData('type');
+                    if (type) {
+                        this.showAddModal(type);
+                    }
+                });
+            }
+
+            setupTypeChange() {
+                const propType = document.getElementById('propType');
+                propType.addEventListener('change', (e) => {
+                    this.updateModalOptions(e.target.value);
+                });
+            }
+
+            updateModalOptions(type) {
+                const stringOptions = document.getElementById('stringOptions');
+                const numberOptions = document.getElementById('numberOptions');
+
+                stringOptions.style.display = type === 'string' ? 'grid' : 'none';
+                numberOptions.style.display = (type === 'number' || type === 'integer') ? 'grid' : 'none';
+            }
+
+            saveState() {
+                this.historyIndex++;
+                this.history = this.history.slice(0, this.historyIndex);
+                this.history.push(JSON.parse(JSON.stringify(this.schema)));
+            }
+
+            undo() {
+                if (this.historyIndex > 0) {
+                    this.historyIndex--;
+                    this.schema = JSON.parse(JSON.stringify(this.history[this.historyIndex]));
+                    this.render();
+                }
+            }
+
+            redo() {
+                if (this.historyIndex < this.history.length - 1) {
+                    this.historyIndex++;
+                    this.schema = JSON.parse(JSON.stringify(this.history[this.historyIndex]));
+                    this.render();
+                }
+            }
+
+            render() {
+                this.renderProperties();
+                this.renderPreview();
+                this.validateSchema();
+            }
+
+            renderProperties() {
+                const list = document.getElementById('propertiesList');
+                const properties = this.schema.properties || {};
+                const required = this.schema.required || [];
+
+                if (Object.keys(properties).length === 0) {
+                    list.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📋</div>
+                            <div class="empty-state-title">暂无属性</div>
+                            <div>点击"添加属性"或拖拽左侧类型开始</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                list.innerHTML = Object.entries(properties).map(([name, prop]) => {
+                    const type = prop.type || 'string';
+                    const isRequired = required.includes(name);
+                    const icons = {
+                        string: '📝',
+                        number: '🔢',
+                        integer: '#️⃣',
+                        boolean: '☑️',
+                        array: '📚',
+                        object: '📦'
+                    };
+
+                    return `
+                        <div class="property-item" data-name="${name}">
+                            <span class="property-drag-handle">⋮⋮</span>
+                            <div class="property-icon ${type}">${icons[type]}</div>
+                            <div class="property-info">
+                                <div class="property-name">
+                                    ${name}
+                                    ${isRequired ? '<span style="color: var(--danger);">*</span>' : ''}
+                                </div>
+                                <div class="property-meta">
+                                    ${type}${prop.description ? ' • ' + prop.description.substring(0, 30) + (prop.description.length > 30 ? '...' : '') : ''}
+                                </div>
+                            </div>
+                            <div class="property-actions">
+                                <button onclick="app.editProperty('${name}')" title="编辑">✏️</button>
+                                <button onclick="app.deleteProperty('${name}')" title="删除">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            renderPreview() {
+                const jsonPreview = document.getElementById('jsonPreview');
+
+                if (this.currentTab === 'json') {
+                    jsonPreview.innerHTML = this.syntaxHighlight(JSON.stringify(this.schema, null, 2));
+                } else {
+                    const example = this.generateExample(this.schema);
+                    jsonPreview.innerHTML = this.syntaxHighlight(JSON.stringify(example, null, 2));
+                }
+            }
+
+            syntaxHighlight(json) {
+                return json
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/(".*?"):/g, '<span class="key">$1</span>:')
+                    .replace(/: "(.*?)"/g, ': <span class="string">"$1"</span>')
+                    .replace(/: (\d+)/g, ': <span class="number">$1</span>')
+                    .replace(/: (true|false)/g, ': <span class="boolean">$1</span>')
+                    .replace(/: null/g, ': <span class="null">null</span>');
+            }
+
+            generateExample(schema) {
+                if (!schema || typeof schema !== 'object') return null;
+
+                switch (schema.type) {
+                    case 'object':
+                        const obj = {};
+                        if (schema.properties) {
+                            for (const [key, prop] of Object.entries(schema.properties)) {
+                                obj[key] = this.generateExample(prop);
+                            }
+                        }
+                        return obj;
+                    case 'array':
+                        return [this.generateExample(schema.items)];
+                    case 'string':
+                        return schema.default || 'example string';
+                    case 'number':
+                    case 'integer':
+                        return schema.default !== undefined ? Number(schema.default) : 42;
+                    case 'boolean':
+                        return schema.default !== undefined ? schema.default === 'true' : true;
+                    default:
+                        return null;
+                }
+            }
+
+            validateSchema() {
+                const panel = document.getElementById('validationPanel');
+                const errors = [];
+
+                // Basic validation
+                if (!this.schema.type) {
+                    errors.push('Schema 缺少 type 字段');
+                }
+
+                if (errors.length === 0) {
+                    panel.innerHTML = `
+                        <div class="validation-item success">
+                            <span class="validation-icon">✅</span>
+                            <span>Schema 格式有效</span>
+                        </div>
+                    `;
+                } else {
+                    panel.innerHTML = errors.map(err => `
+                        <div class="validation-item error">
+                            <span class="validation-icon">❌</span>
+                            <span>${err}</span>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            showAddModal(defaultType = null) {
+                this.editingProperty = null;
+                document.getElementById('modalTitle').textContent = '添加属性';
+                document.getElementById('propName').value = '';
+                document.getElementById('propType').value = defaultType || 'string';
+                document.getElementById('propDescription').value = '';
+                document.getElementById('propDefault').value = '';
+                document.getElementById('propRequired').checked = false;
+                document.getElementById('propMinLength').value = '';
+                document.getElementById('propMaxLength').value = '';
+                document.getElementById('propMinimum').value = '';
+                document.getElementById('propMaximum').value = '';
+
+                this.updateModalOptions(defaultType || 'string');
+                document.getElementById('propertyModal').classList.add('active');
+            }
+
+            editProperty(name) {
+                const prop = this.schema.properties[name];
+                if (!prop) return;
+
+                this.editingProperty = name;
+                document.getElementById('modalTitle').textContent = '编辑属性';
+                document.getElementById('propName').value = name;
+                document.getElementById('propType').value = prop.type || 'string';
+                document.getElementById('propDescription').value = prop.description || '';
+                document.getElementById('propDefault').value = prop.default || '';
+                document.getElementById('propRequired').checked = (this.schema.required || []).includes(name);
+                document.getElementById('propMinLength').value = prop.minLength || '';
+                document.getElementById('propMaxLength').value = prop.maxLength || '';
+                document.getElementById('propMinimum').value = prop.minimum || '';
+                document.getElementById('propMaximum').value = prop.maximum || '';
+
+                this.updateModalOptions(prop.type || 'string');
+                document.getElementById('propertyModal').classList.add('active');
+            }
+
+            saveProperty() {
+                const name = document.getElementById('propName').value.trim();
+                const type = document.getElementById('propType').value;
+                const description = document.getElementById('propDescription').value.trim();
+                const defaultValue = document.getElementById('propDefault').value.trim();
+                const isRequired = document.getElementById('propRequired').checked;
+
+                if (!name) {
+                    alert('请输入属性名称');
+                    return;
+                }
+
+                // Build property object
+                const prop = { type };
+                if (description) prop.description = description;
+                if (defaultValue) prop.default = defaultValue;
+
+                // Type-specific options
+                if (type === 'string') {
+                    const minLength = document.getElementById('propMinLength').value;
+                    const maxLength = document.getElementById('propMaxLength').value;
+                    if (minLength) prop.minLength = parseInt(minLength);
+                    if (maxLength) prop.maxLength = parseInt(maxLength);
+                } else if (type === 'number' || type === 'integer') {
+                    const minimum = document.getElementById('propMinimum').value;
+                    const maximum = document.getElementById('propMaximum').value;
+                    if (minimum) prop.minimum = parseFloat(minimum);
+                    if (maximum) prop.maximum = parseFloat(maximum);
+                }
+
+                // Remove old property if editing
+                if (this.editingProperty && this.editingProperty !== name) {
+                    delete this.schema.properties[this.editingProperty];
+                    const reqIndex = (this.schema.required || []).indexOf(this.editingProperty);
+                    if (reqIndex > -1) {
+                        this.schema.required.splice(reqIndex, 1);
+                    }
+                }
+
+                // Add new property
+                if (!this.schema.properties) this.schema.properties = {};
+                this.schema.properties[name] = prop;
+
+                // Update required array
+                if (!this.schema.required) this.schema.required = [];
+                const reqIndex = this.schema.required.indexOf(name);
+                if (isRequired && reqIndex === -1) {
+                    this.schema.required.push(name);
+                } else if (!isRequired && reqIndex > -1) {
+                    this.schema.required.splice(reqIndex, 1);
+                }
+
+                this.saveState();
+                this.render();
+                this.closeModal();
+            }
+
+            deleteProperty(name) {
+                if (!confirm(`确定要删除属性 "${name}" 吗？`)) return;
+
+                delete this.schema.properties[name];
+                const reqIndex = (this.schema.required || []).indexOf(name);
+                if (reqIndex > -1) {
+                    this.schema.required.splice(reqIndex, 1);
+                }
+
+                this.saveState();
+                this.render();
+            }
+
+            closeModal() {
+                document.getElementById('propertyModal').classList.remove('active');
+            }
+
+            switchTab(tab) {
+                this.currentTab = tab;
+                document.querySelectorAll('.preview-tab').forEach(t => t.classList.remove('active'));
+                event.target.classList.add('active');
+                this.renderPreview();
+            }
+
+            importSchema() {
+                document.getElementById('importModal').classList.add('active');
+            }
+
+            closeImportModal() {
+                document.getElementById('importModal').classList.remove('active');
+            }
+
+            parseImport() {
+                const text = document.getElementById('importSchemaText').value.trim();
+                try {
+                    const parsed = JSON.parse(text);
+                    if (parsed.type === 'object' && parsed.properties) {
+                        this.schema = parsed;
+                        this.saveState();
+                        this.render();
+                        this.closeImportModal();
+                    } else {
+                        alert('无效的 JSON Schema：必须包含 type: "object" 和 properties 字段');
+                    }
+                } catch (e) {
+                    alert('JSON 解析错误: ' + e.message);
+                }
+            }
+
+            exportSchema() {
+                const blob = new Blob([JSON.stringify(this.schema, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'schema.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+
+            copySchema() {
+                const json = JSON.stringify(this.schema, null, 2);
+                navigator.clipboard.writeText(json).then(() => {
+                    alert('已复制到剪贴板！');
+                }).catch(() => {
+                    alert('复制失败，请手动复制');
+                });
+            }
+
+            clearSchema() {
+                if (!confirm('确定要清空所有属性吗？')) return;
+                this.schema = {
+                    type: 'object',
+                    properties: {},
+                    required: []
+                };
+                this.saveState();
+                this.render();
+            }
+
+            loadExample() {
+                this.schema = {
+                    type: "object",
+                    title: "User",
+                    description: "用户信息对象",
+                    properties: {
+                        id: {
+                            type: "integer",
+                            description: "用户唯一标识",
+                            minimum: 1
+                        },
+                        username: {
+                            type: "string",
+                            description: "用户名",
+                            minLength: 3,
+                            maxLength: 20
+                        },
+                        email: {
+                            type: "string",
+                            description: "电子邮箱地址",
+                            format: "email"
+                        },
+                        age: {
+                            type: "integer",
+                            description: "年龄",
+                            minimum: 0,
+                            maximum: 150
+                        },
+                        isActive: {
+                            type: "boolean",
+                            description: "是否激活",
+                            default: true
+                        },
+                        tags: {
+                            type: "array",
+                            description: "用户标签",
+                            items: {
+                                type: "string"
+                            }
+                        }
+                    },
+                    required: ["id", "username", "email"]
+                };
+                this.saveState();
+                this.render();
+            }
+        }
+
+        // Initialize app
+        const app = new JSONSchemaEditor();
+
+        // Load example on first load
+        window.addEventListener('load', () => {
+            app.loadExample();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'z') {
+                    e.preventDefault();
+                    app.undo();
+                } else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
+                    e.preventDefault();
+                    app.redo();
+                } else if (e.key === 's') {
+                    e.preventDefault();
+                    app.exportSchema();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
