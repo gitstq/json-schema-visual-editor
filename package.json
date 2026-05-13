@@ -1,0 +1,38 @@
+{
+  "name": "json-schema-visual-editor",
+  "version": "1.0.0",
+  "description": "🎨 A lightweight, browser-based JSON Schema visual editor with drag-and-drop interface, real-time preview, and multi-format export support.",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "dev": "python3 -m http.server 8080",
+    "build": "npm run minify",
+    "minify": "echo 'No build step required - pure HTML/CSS/JS'",
+    "test": "echo 'Open http://localhost:8080 in your browser'"
+  },
+  "keywords": [
+    "json-schema",
+    "visual-editor",
+    "schema-designer",
+    "drag-and-drop",
+    "json",
+    "schema",
+    "editor",
+    "web-app",
+    "zero-dependencies",
+    "frontend"
+  ],
+  "author": "JSON Schema Visual Editor Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/json-schema-visual-editor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/json-schema-visual-editor/issues"
+  },
+  "homepage": "https://github.com/yourusername/json-schema-visual-editor#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
